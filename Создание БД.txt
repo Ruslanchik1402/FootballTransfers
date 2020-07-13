@@ -1,0 +1,238 @@
+--создание и заполнение БД
+
+CREATE DATABASE MyTransfers1
+Collate Cyrillic_General_CI_AS
+GO
+
+CREATE TABLE PlayersList(
+ID int NOT NULL Primary key,
+surname nvarchar(30) NULL,
+name nvarchar(30) NOT NULL,
+middlename nvarchar(30) NULL,
+position nvarchar(30) NOT NULL,
+countryoforigin nvarchar(50) NOT NULL,
+birthdate date CONSTRAINT CH_BD CHECK (birthdate between '1976-01-01' and '2004-01-01'),
+is_natteam_player smallint DEFAULT 0,
+)
+
+
+
+
+
+select *
+from PlayersList
+
+
+CREATE TABLE ClubsList(
+ID int NOT NULL Primary Key,
+clubname varchar(30) NOT NULL,
+dateoforigin date,
+budget money not null,
+numofplayers int NOT NULL,
+country varchar(30) NOT NULL,
+stadium_capacity int NOT NULL,
+)
+
+
+
+
+Select *
+From ClubsList
+
+Create table ClubAfillation(
+ID_player int NOT NULL,
+ID_club int NOT NULL,
+contract_term int NOT NULL DEFAULT 4,
+dateofsigning date NOT NULL,
+salaryperyear money NOT NULL,
+totalsalary AS convert(money,salaryperyear*contract_term))
+
+
+
+
+insert into ClubsList(ID,clubname,dateoforigin,budget,numofplayers,country,stadium_capacity)
+values ('1','Барселона','','1000000000','1','Испания','100000'),
+		('2','Манчестер Сити','','1000000000','1','Англия','60000'),
+		('3','Арсенал','','800000000','1','Англия','66000'),
+		('4','Бавария','','1000000000','1','Германия','90000'),
+		('5','Монако','','60000000','1','Франция','40000'),
+		('6','Локомотив','','30000000','1','Российская Федерация','25000'),
+		('7','Крылья Советов','','15000000','1','Российская Федерация','200000'),
+		('8','ЦСКА','','20000000','1','Российская Федерация','40000'),
+		('9','Ювентус','','1000000000','1','Италия','80000'),
+		('10','ПСЖ','','1000000000','1','Франция','70000'),
+		('11','Альбасете','','22000000','1','Испания','28000')
+
+
+insert into PlayersList(ID,surname,name,middlename,position,countryoforigin,birthdate,is_natteam_player)
+values ('4124','Ляказетт','Александр','','Форвард','Франция','1992-02-04','1'),
+		('1','Нойер','Мануэль','','Вратарь','Германия','1987-07-04','1'),
+		('14','Обамеянг','Пьер-Эмерик','','Форвард','Габон','1989-05-06','1'),
+		('13','Джака','Гранит','','Полузащитник','Швейцария','1992-08-07','1'),
+		('17','Головин','Александр','','Полузащитник','Российская Федерация','1996-03-05','1'),
+		('18','Смолов','Фёдор','','Форвард','Российская Федерация','1993-07-12','1'),
+		('20','','Неймар','','Форвард','Бразилия','1994-11-11','1'),
+		('7','Роналду','Криштиану','','Форвард','Португалия','1984-02-02','1'),
+		('10','Месси','Лионель','','Полузащитник','Аргентина','1986-09-05','1'),
+		('88','Зозуля','Роман','','Форвард','Украина','1993-06-08','0'),
+		('19','Сильва','Бернарду','','Полузащитник','Португалия','1995-03-04','1'),
+		('212','Ляпорт','Аймерик','','Защитник','Франция','1997-08-01','1'),
+		('763','Стерлинг','Рахим','','Форвард','Англия','1995-12-12','1'),
+		 ('252','Сильва','Давид','','Полузащитник','Испания','1984-04-04','0'),
+		 ('124','Бурлак','Тарас','','Защитник','Российская Федерация','1993-05-05','0'),
+		 ('5678','Акинфеев','Игорь','','Вратарь','Российская Федерация','1984-11-12','0')
+
+
+insert into ClubAfillation(ID_player,ID_club,contract_term,dateofsigning,salaryperyear)
+values('4124','3','4','2017-08-01','2500000'),
+		('1','4','10','2014-08-01','3500000'),
+		('14','3','3','2019-08-01','3000000'),
+		('13','3','5','2016-08-01','2500000'),
+		('17','5','3','2018-08-01','1500000'), 
+		('18','6','4','2016-08-01','1000000'),
+		('20','10','5','2017-08-01','5500000'),
+		('7','9','3','2018-08-01','8500000'),
+		('10','1','10','2013-08-01','10000000'),
+		('88','11','2','2018-08-01','800000'),
+		('19','2','4','2017-08-01','2500000'),
+		('212','2','4','2017-08-01','2500000'),
+		('763','2','4','2017-08-01','2500000'),
+		('252','2','8','2013-08-01','3000000'),
+		('124','7','4','2016-08-01','900000'),
+		('5678','8','10','2013-08-01','1500000')
+
+--процедуры
+
+Use MyTransfers1
+GO
+
+CREATE PROCEDURE [dbo].[getmaxsalaryofclub1337]
+(@Club Nvarchar(50), @SumKol money OUTPUT)
+AS
+BEGIN
+SET NOCOUNT ON;
+SELECT @SumKol = max(ca.totalsalary)
+ FROM ClubAfillation ca INNER JOIN ClubsList c ON
+ ca.ID_Club=c.ID
+ WHERE  c.clubname=@Club
+END
+
+Use MyTransfers1
+GO
+CREATE PROCEDURE [dbo].[getmaxsalaryofclub1337_cursor]
+(@Club Nvarchar(50), @SumKol money OUTPUT)
+AS
+BEGIN
+SET NOCOUNT ON;
+DECLARE @MaxContr money, @Contr money, @Kod_cl int,
+ @Old_Kodcl int, @Sum_Contr int;
+DECLARE @MaxKod_cl int
+SET @Contr = 0;
+SET @Sum_Contr=0;
+DECLARE my_cur CURSOR FOR
+SELECT cl.ID, SUM(ca.salaryperyear) AS summarysalary
+FROM ClubsList cl inner join ClubAfillation ca on cl.ID=ca.ID_club
+WHERE ca.dateofsigning>='01.01.1900' AND
+ca.dateofsigning<=GETDATE()
+group by cl.ID
+OPEN my_cur
+FETCH my_cur INTO @Kod_cl,@Contr
+SET @Old_Kodcl=@Kod_cl
+SET @MaxContr=0
+SET @MaxKod_cl=0
+WHILE @@FETCH_STATUS=0
+BEGIN
+WHILE @@FETCH_STATUS=0 AND @Kod_cl=@Old_Kodcl
+BEGIN
+ SET @Sum_Contr=@Sum_Contr+@Contr
+ FETCH my_cur INTO @Kod_cl, @Contr
+END
+IF @MaxContr<@Sum_Contr
+BEGIN
+ SET @MaxContr=@Sum_Contr
+ SET @MaxKod_cl=@Old_Kodcl
+END
+SET @Old_Kodcl=@Kod_cl
+SET @Sum_Contr=0
+END
+
+IF @MaxContr<@Sum_Contr
+ BEGIN
+ SET @MaxContr=@Sum_Contr
+ SET @MaxKod_cl=@Old_Kodcl
+ END
+SELECT @Club=clubname from ClubsList
+where ID=@MaxKod_cl
+CLOSE my_cur
+DEALLOCATE my_cur
+END
+
+
+
+SELECT @SumKol = max(ca.totalsalary)
+ FROM ClubAfillation ca INNER JOIN ClubsList c ON
+ ca.ID_Club=c.ID
+ WHERE  c.clubname=@Club
+END
+
+
+
+
+--запросы
+
+
+select ClubsList.clubname, Count(PlayersList.name) as legionersnum 
+from PlayersList, ClubsList, ClubAfillation 
+where PlayersList.ID=ClubAfillation.ID_player and ClubsList.ID=ClubAfillation.ID_Club and PlayersList.countryoforigin<>ClubsList.country  
+Group by ClubsList.clubname 
+Having Count(PlayersList.name)>=3
+
+select ClubsList.clubname, Count(PlayersList.name) as legionersnum from PlayersList, ClubsList, ClubAfillation where PlayersList.ID=ClubAfillation.ID_player and ClubsList.ID=ClubAfillation.ID_Club and PlayersList.countryoforigin<>ClubsList.country and Count(PlayersList.name)>=3 Group by ClubsList.clubname 
+
+
+select clubname, ID from ClubsList 
+group by clubname, ID 
+Having clubname not in 
+(Select ClubsList.clubname 
+from PlayersList, ClubAfillation, ClubsList 
+Where (PlayersList.birthdate>='1999-12-18' or PlayersList.birthdate<='1989-12-18') 
+and ClubsList.ID=ClubAfillation.ID_club and PlayersList.ID=ClubAfillation.ID_player)
+
+
+select clubname, ID from ClubsList cl group by clubname, ID where not exists  (Select *  from PlayersList pl, ClubAfillation ca Where (pl.birthdate>='1999-12-18' or pl.birthdate<='1989-12-18') and cl.ID=ca.ID_club and pl.ID=ca.ID_player)
+
+create index ix_clubname on ClubsList(clubname)
+create index ix_date on ClubAfillation(dateofsigning)
+select ClubsList.clubname, sum(ClubAfillation.totalsalary) 
+from ClubsList, ClubAfillation 
+where ClubsList.ID=ClubAfillation.ID_club and ClubAfillation.dateofsigning<='2017-12-31' and ClubAfillation.dateofsigning>='2017-01-01' 
+Group by ClubsList.clubname
+
+select ClubsList.clubname, ClubAfillation.totalsalary, ClubAfillation.dateofsigning 
+from ClubsList, ClubAfillation 
+where ClubsList.ID=ClubAfillation.ID_club 
+order by ClubAfillation.dateofsigning, ClubsList.clubname
+
+Select PlayersList.surname, PlayersList.name, PlayersList.ID From PlayersList, ClubsList, ClubAfillation 
+Where PlayersList.ID=ClubAfillation.ID_player AND ClubsList.ID=ClubAfillation.ID_Club AND PlayersList.countryoforigin='Российская Федерация' AND ClubsList.clubname=@Club
+
+
+select n.clubname,CASE
+WHEN k.count IS NULL THEN '0'
+ELSE k.count
+END count
+from ClubsList n LEFT JOIN (select max(n.clubname) as name_np,COUNT(s.totalsalary) as count
+from ClubsList n,ClubAfillation s
+where n.ID = s.ID_player
+group by s.dateofsigning) as k ON n.clubname=k.name_np;
+
+
+select n.clubname,
+CASE
+WHEN sum(totalsalary)=0 THEN '0'
+ELSE sum(totalsalary)
+END 
+totalsalary
+from ClubsList n, ClubAfillation  
+where n.ID=ClubAfillation.ID_club and ClubAfillation.dateofsigning<='2017-12-31' and ClubAfillation.dateofsigning>='2017-01-01' 
+Group by n.clubname
